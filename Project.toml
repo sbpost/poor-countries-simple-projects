@@ -1,7 +1,16 @@
 name = "poor-countries-simple-products"
 authors = ["Søren Post"]
-[compat]
-julia = "1.6.2"
-DrWatson = "2.5.0"
+
 [deps]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+
+[compat]
+DrWatson = "2.5.0"
+julia = "1.6.2"
