@@ -2,15 +2,12 @@ using DrWatson
 @quickactivate "poor-countries-simple-products"
 
 using DataFrames
-using CSV
 using Arrow
 
 # Also load in the dictionaries containing the strucutre of the panel data (.txt files)
 include(scriptsdir("asi-data-column-separation-dictionaries.jl"))
 
-
 # Get a list of ASI files covering data from 2000 to 2009 (inclusive)
-
 # The directories supplied from the ASI is a bit messy. # TODO Describe what happens in script
 
 "Recursively go into any folder in `parent_dir` and grab all files that end in '.TXT'."
@@ -83,15 +80,12 @@ columns. This list of "rows" is then gathered into a dataframe. Finally, all the
 """
 function parse_asi_files(ASI_paths::Dict)
     for block in keys(ASI_paths) # loop over all years
-        parsed_blocks = DataFrame[]
-        # `parsed_blocks` is a container for observations from a survey block.
-        # Each element is observations (stored in a dataframe) from the given block
-        # in a single year.
-
         # Get all paths for the current block:
         year_path_dict = ASI_paths[block]
-
-        rows_in_input_data = 0 # counter to make sure I get all the data
+        block_folder = datadir("temp", "raw-blocks", "$block")
+        if !isdir(block_folder)
+            mkdir(block_folder)
+        end
 
         Threads.@threads for year in collect(eachindex(year_path_dict)) # loop over all blocks in the year
             # Note that the slightly strange iterator is because @threads does not handle
@@ -104,7 +98,6 @@ function parse_asi_files(ASI_paths::Dict)
             panel_structure_dict = select_panel_structure(parse(Int, year))
             path = year_path_dict[year]
             txt_data = readlines(path);
-            rows_in_input_data += length(txt_data) # increment counter of observations in block-years
 
             # Select the proper dictionary with the column-separation structure:
             structure_dict = panel_structure_dict[block]
@@ -115,18 +108,15 @@ function parse_asi_files(ASI_paths::Dict)
             # and a value for the observation.
             column_separated_rows = parse_asi_row.(txt_data, Ref(structure_dict));
 
-            # Get all of the tuples into one data frame.
-            push!(parsed_blocks, DataFrame([row for row in column_separated_rows]))
+            block_year_df = DataFrame([row for row in column_separated_rows])
+            rows_in_input_data = length(txt_data) # count no of observations in block-years
+            check_output(block_year_df, rows_in_input_data)
+            @info "Writing block $block, year $year to file."
+            Arrow.write(
+                joinpath(block_folder, "block-$(block)-year-$(year).arrow"),
+                block_year_df
+            )
         end
-
-        block_df = reduce(vcat, parsed_blocks, cols=:union)
-        check_output(block_df, rows_in_input_data)
-
-        # Write to file to avoid memory constrains (on laptop).
-        @info "Writing block $block to file."
-        Arrow.write(datadir("temp", "block-$(block)-all-years-pre-cleaning.arrow"), block_df)
- #       CSV.write(datadir("temp", "block-$(block)-all-years-pre-cleaning.csv"), block_df)
-        # bson(datadir("temp", "block-$(block)-all-years-pre-cleaning.bson"), parsed_row_dict)
     end
 end
 
@@ -205,14 +195,13 @@ function check_output(block_df, rows_in_input_data)
     #     # There are also ~80 observations that have a wrong factory-ID format. They will be dropped
     #     # later. If there are less than 100 factory_ids with
     #     whitespace_test = passmissing.(match).(r"\s+", block_df[!, col])
-
     #     @assert typeof(whitespace_test) ∈ [Vector{Nothing}, Vector{Union{Missing, Nothing}}] "Column $col in block $block has whitespace after stripping."
     # end
 end
 
-# APPLY
+# ---------------------------------------------------------------------------- #
+# Apply functions to read the ASI data:
 ASI_2000_2009_paths = grab_asi_filepaths(datadir("external", "asi", "asi-2000-2009"));
 ASI_2010_2015_paths = grab_asi_filepaths(datadir("external", "asi", "asi-2010-2015"));
 ASI_paths = organize_filepaths(vcat(ASI_2000_2009_paths, ASI_2010_2015_paths))
 parse_asi_files(ASI_paths)
-println("DONE")
