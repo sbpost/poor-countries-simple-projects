@@ -8,6 +8,13 @@ using Chain
 using Arrow
 using CSV
 
+# Helper function to fix issue with numeric variables have 3 "," in them.
+function fix_numeric_types(val::String)
+    val = replace(val, "," => "")
+    return parse(Float64, val)
+end
+
+
 function clean_powersupply(allcott_et_al_supply_path::String, allcott_et_al_supply_2003_path::String, cea_paths::Vector{String})
     # This function reads, cleans, and formats the power-supply data from
     # India's Central Electricity Authority.
@@ -81,11 +88,6 @@ function clean_powersupply(allcott_et_al_supply_path::String, allcott_et_al_supp
     # They are used unusually, however: the CEA uses "40,000" to denote
     # fourty-thousands but also "1,40,000" to denote one hundred and forty thousands.
     # This screws up the column typing.
-    function fix_numeric_types(val)
-        val = replace(val, "," => "")
-        return parse(Float64, val)
-    end
-
     powersupply_df = @chain powersupply_df begin
         @rtransform :requirement_mu = string(:requirement_mu) # force everything to be a string
         @rtransform :availability_mu = string(:availability_mu)
@@ -121,23 +123,22 @@ Arrow.write(
     powersupply_df
 )
 
+# Check for outlier valuies:
+# mean_supply_df = @chain powersupply_df begin
+#     groupby(_, :state)
+#     @combine _ begin
+#         :mean_requirement = mean(:requirement_mu)
+#         :sd_requirement = std(:requirement_mu)
+#         :mean_availability = mean(:availability_mu)
+#         :sd_availability = std(:availability_mu)
+#     end
+# end
 
-    # Check for outlier valuies:
-    # mean_supply_df = @chain powersupply_df begin
-    #     groupby(_, :state)
-    #     @combine _ begin
-    #         :mean_requirement = mean(:requirement_mu)
-    #         :sd_requirement = std(:requirement_mu)
-    #         :mean_availability = mean(:availability_mu)
-    #         :sd_availability = std(:availability_mu)
-    #     end
-    # end
-
-    # # Add
-    # outlier_df = @chain powersupply_df begin
-    #     leftjoin(_, mean_supply_df, on=:state)
-    #     @rtransform _ :z_req = abs((:requirement_mu - :mean_requirement) / :sd_requirement)
-    #     @rtransform _ :z_avail = abs((:availability_mu - :mean_availability) / :sd_availability)
-    #     sort(_, :z_req)
-    #     @select(_, $(Not([:sd_requirement, :mean_requirement, :sd_availability, :mean_availability])))
-    # end
+# # Add
+# outlier_df = @chain powersupply_df begin
+#     leftjoin(_, mean_supply_df, on=:state)
+#     @rtransform _ :z_req = abs((:requirement_mu - :mean_requirement) / :sd_requirement)
+#     @rtransform _ :z_avail = abs((:availability_mu - :mean_availability) / :sd_availability)
+#     sort(_, :z_req)
+#     @select(_, $(Not([:sd_requirement, :mean_requirement, :sd_availability, :mean_availability])))
+# end

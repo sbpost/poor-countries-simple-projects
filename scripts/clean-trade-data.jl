@@ -1,12 +1,6 @@
 using DrWatson
 @quickactivate "poor-countries-simple-products"
 
-using DataFrames
-using DataFramesMeta
-using Chain
-using Arrow
-
-
 function clean_export_data(
     exports_raw::DataFrame,
     pop_df::DataFrame;
@@ -137,9 +131,9 @@ end
 # Apply functions to clean the exports data:
 raw_export_path = datadir("external", "international-trade", "year_origin_hs96_4.tsv")
 exports_raw = CSV.read(raw_export_path, DataFrame, types = String)
-pop_df = Arrow.Table(datadir("processed", "international-population.arrow")) |> DataFrame
+pop_df = Arrow.Table(datadir("processed", "international-population", "international-population.arrow")) |> DataFrame
 exports_df = clean_export_data(exports_raw, pop_df)
 Arrow.write(
-    datadir("processed", "ASI", "international-exports.arrow"),
+    datadir("processed", "international-trade", "international-exports.arrow"),
     exports_df
     )

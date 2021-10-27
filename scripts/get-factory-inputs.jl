@@ -128,6 +128,6 @@ end
 block_h_df = Arrow.Table(datadir("temp", "formatted-blocks", "block-H-all-years.arrow")) |> DataFrame
 local_inputs_df = get_local_inputs(block_h_df)
 Arrow.write(
-    datadir("processed", "local-factory-inputs.arrow"),
+    datadir("processed", "ASI", "local-factory-inputs.arrow"),
     block_h_df
 )

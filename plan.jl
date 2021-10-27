@@ -3,6 +3,11 @@ using DrWatson
 
 # Activate packages:
 using Planner
+using DataFrames
+using DataFramesMeta
+using Chain
+using Arrow
+using CSV
 
 # Initialize plan
 plan = startplanning()
@@ -43,7 +48,7 @@ addtarget!(
 # ---------------------------------- #
 addtarget!(
     plan,
-    [datadir("processed", "international-population.arrow")],
+    [datadir("processed", "international-population", "international-population.arrow")],
     [datadir("external", "pop-international", "population_total.csv"),
      scriptsdir("clean-pop-data.jl")]
 )
@@ -52,26 +57,27 @@ addtarget!(
 # ----------------------------- #
 addtarget!(
     plan,
-    [datadir("processed", "international-population.arrow")],
+    [datadir("processed", "international-trade", "international-exports.arrow")],
     [datadir("external", "international-trade", "year_origin_hs96_4.tsv"),
      scriptsdir("clean-trade-data.jl")]
 )
 # ========================================================================= #
-# TODO Calculate country comparative advantage:
-# ----------------------------------#
-# RCA
-addtarget!(
-    plan,
-    [datadir("processed", "rca.arrow")],
-    [datadir("processed", "international-exports.arrow"),
-     scriptsdir("comparative-advantage.jl")]
-)
+# Calculate country comparative advantage:
+# ---------------------------------------- #
 # RPCA
 addtarget!(
     plan,
-    [datadir("processed", "rpca.arrow")],
-    [datadir("processed", "international-exports.arrow"),
-     datadir("processed", "international-population.arrow"),
+    [datadir("processed", "international-exports", "rpca.arrow")],
+    [datadir("processed", "international-exports", "international-exports.arrow"),
+     datadir("processed", "international-population", "international-population.arrow"),
+     scriptsdir("comparative-advantage.jl")]
+)
+
+# RCA
+addtarget!(
+    plan,
+    [datadir("processed", "international-exports", "rca.arrow")],
+    [datadir("processed", "international-exports", "international-exports.arrow"),
      scriptsdir("comparative-advantage.jl")]
 )
 
@@ -84,7 +90,7 @@ addtarget!(
 # --------------------- #
 addtarget!(
     plan,
-    [datadir("processed", "local-factory-inputs.arrow")],
+    [datadir("processed", "ASI", "local-factory-inputs.arrow")],
     [datadir("temp", "formatted-blocks", "block-H-all-years.arrow"),
      scriptsdir("get-factory-inputs.jl")]
 )
@@ -127,3 +133,6 @@ addtarget!(
 
 
 runplan(plan)
+
+plan.graph_data
+edges(plan.G) |> collect

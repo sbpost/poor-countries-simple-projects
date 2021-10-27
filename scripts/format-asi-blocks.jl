@@ -26,6 +26,7 @@ variables = Dict(
            factory_id = String,
            block = String,
            type_organisation = String,
+ #          type_ownership = String, # NOTE: Could be useful w/r/t state-led diversification.
            initial_production = Int64,
            multiplier= Float64),
     :C => (year = Int64,
@@ -57,7 +58,7 @@ variables = Dict(
             sno = Int64,
             qty_unit = Float64,
             qty_consumed = Float64,
-            item_code = Int64,
+            item_code = String,
             purchase_val = Float64,
             multiplier = Float64),
     :I => (year = Int64,
@@ -66,14 +67,14 @@ variables = Dict(
            sno = Int64,
            qty_unit = Float64,
            qty_consumed = Float64,
-           item_code = Int64,
+           item_code = String,
            purchase_val = Float64,
            multiplier = Float64),
     :J => (year = Int64,
            factory_id = String,
            block = String,
            sno = Int64,
-           item_code = Int64,
+           item_code = String,
            qty_unit = Float64,
            qty_sold = Float64,
            ex_factory_val = Float64,
@@ -96,10 +97,8 @@ function clean_block(block_df::DataFrame, colmeta::NamedTuple)
 
     # Fix year variable:
     # Observations from 2014-15 have only "15" (and not 2015) in their year variable.
-    # First I fix this.
-    if 15 ∈ Set(block_data.year)
-        block_data.year .= 2015
-    end
+    # Fix this:
+    block_data = @rtransform block_data :year = 15 ∈ :year ? 2015 : :year
 
     # Create a new year variable:
     # currently, year refers to the "March"-year of the financial

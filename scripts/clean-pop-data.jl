@@ -1,11 +1,6 @@
 using DrWatson
 @quickactivate "poor-countries-simple-products"
 
-using DataFrames
-using DataFramesMeta
-using Chain
-using CSV
-
 "Clean population data from WDI."
 function clean_pop_data(pop_raw::DataFrame)
     # Remove columns that shouldn't get stacked. `Column65` is a column that gets added
@@ -41,6 +36,6 @@ pop_raw_path = datadir("external", "pop-international", "population_total.csv")
 pop_raw = CSV.read(pop_raw_path, DataFrame, header = 5)
 pop_df = clean_pop_data(pop_raw)
 Arrow.write(
-    datadir("processed", "international-population.arrow"),
+    datadir("processed", "international-population", "international-population.arrow"),
     pop_df
 )

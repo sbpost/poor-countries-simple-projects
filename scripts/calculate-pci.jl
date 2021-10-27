@@ -8,55 +8,94 @@ using Arrow
 using LinearAlgebra
 using Statistics
 
-rca_df = Arrow.Table(datadir("processed", "rca.arrow")) |> DataFrame
-rpca_df = Arrow.Table(datadir("processed", "rpca.arrow")) |> DataFrame
 
-rca_df
-rpca_df
+function get_complexity(Mcp::Matrix)
+    Kc0 = sum(Mcp, dims=2) # diversity, n-countries by 1 matrix
+    Kp0 = sum(Mcp, dims=1) # ubuiquity, 1 by n-products
 
-rca15 = @subset rca_df :year .== 2015
-
-rca15 = @rtransform rca15 :rca = :export_rca >= 1 ? 1 : 0
-select!(rca15, :countrycode, :hs_product_code, :rca)
-
-rca_wide = unstack(rca15, :countrycode, :hs_product_code, :rca, allowmissing=true)
-
-countries = rca_wide.countrycode
-select!(rca_wide, Not(:countrycode))
-rca_wide
-products = rca_wide |> names
-Mcp = Matrix(rca_wide)
-
-Kc0 = sum(Mcp, dims=2) # diversity, n-countries by 1 matrix
-Kp0 = sum(Mcp, dims=1) # ubuiquity, 1 by n-products
-Mcc = (Mcp ./ Kc0) * (Mcp ./ Kp0)'
-# Grab the eigenvector associated with the next-largest
-# eigen-value (largets is just ones)
-K_vec = eigen(Mcc).vectors[:, end-1]
-
-# Standardize to ECI:
-ECI = (K_vec .- mean(K_vec)) ./ std(K_vec) # standardize (Z)
-eci_df = DataFrame(eci = ECI, countrycodes = cc)
-sort(eci_df, :eci)
-
-# PCI -> TODO something is off: rankings seems to be reversed.
-Mpp = (Mcp ./ Kp0)' * (Mcp ./ Kc0)
-Q_vec = Real.(eigen(Mpp).vectors[:, end-1])
-PCI = (Q_vec .- mean(Q_vec)) ./ std(Q_vec) # standardize (Z)
-pci_df = DataFrame(pci = PCI, hs_product_codes = products)
-sort(pci_df, :pci)
-
-using CSV
-pci_harvard = CSV.read(datadir("external", "complexity", "from-harvard", "Product Complexity Rankings 1995 - 2019.csv"), DataFrame)
-select!(pci_harvard, ["HS4 Code", "PCI 2015", "Product"])
-rename!(pci_harvard, "HS4 Code" => :hs_product_codes, "PCI 2015" => :harvard_pci)
-
-joined = leftjoin(pci_df, pci_harvard, on = :hs_product_codes)
+    # Grab the eigenvector associated with the next-largest
+    # eigen-value:
+    Mpp = (Mcp ./ Kp0)' * (Mcp ./ Kc0)
+    Q_vec = Real.(eigen(Mpp).vectors[:, end-1])
 
 
-sort(joined, :harvard_pci)
-sort(joined, :pci)
+    # Now we can insert Q_vec (Kp) into the equation for K_vec (Kc)
+    K_vec = (1 ./ Kc0) .* (Mcp * Q_vec)
 
-dropmissing!(joined)
+    # Standardize to PCI and ECI
+    PCI = (Q_vec .- mean(Q_vec)) ./ std(Q_vec)
+    ECI = (K_vec .- mean(K_vec)) ./ std(K_vec)
+    return ECI, PCI
+end
 
-cor(joined.harvard_pci, joined.pci)
+
+function complexity_helper(comparative_advantage::DataFrame)
+    # Make sure we only have columns we need:
+    select!(comparative_advantage, :countrycode, :hs_product_code, :rca)
+    # Make dataframe wide --products in column names:
+    rca_wide = unstack(rca15, :countrycode, :hs_product_code, :rca, allowmissing=true)
+    # Save countries for later:
+    countries = rca_wide.countrycode
+    # Remove countrycode column:
+    select!(rca_wide, Not(:countrycode))
+    # Save product names for later:
+    products = rca_wide |> names
+    # Get Mcp matrix to calculate complexity from:
+    Mcp = Matrix(rca_wide)
+
+    # Calculate ECI and PCI:
+    ECI, PCI = get_complexity(Mcp)
+
+    # Turn into dataframes and add country- and product names.
+    pci_df = DataFrame(PCI = PCI, hs_product_codes = products)
+    eci_df = DataFrame(ECI = ECI[:, 1], countrycodes = countries)
+
+    # Get sign and adjust based on very complex country:
+    jpn_eci = @rsubset(eci_df, :countrycodes == "JPN").ECI |> only
+    eigensign = jpn_eci < 0 ? -1 : 1
+    eci_df.PCI = eci_df.ECI .* sign
+    pci_df.PCI = pci_df.PCI .* sign
+
+    return eci_df, pci_df
+end
+
+# ================================================================== #
+# Apply functions and calculate PCI, ECI based on RCA and RPCA:
+# ----------------------------------------------------------- #
+
+rca_df = Arrow.Table(datadir("processed", "international-trade", "rca.arrow")) |> DataFrame
+rpca_df = Arrow.Table(datadir("processed", "international-trade", "rpca.arrow")) |> DataFrame
+
+# Binarize:
+@rtransform!(rca_df, :rca = :export_rca >= 1 ? 1 : 0)
+@rtransform!(rpca_df, :rca = :export_rpca >= 1 ? 1 : 0)
+
+# Get complexity for each year:
+rca_complexity = [complexity_helper(@subset(rca_df, :year .== year)) for year in rca_df.year |> unique]
+rpca_complexity = [complexity_helper(@subset(rpca_df, :year .== year)) for year in rpca_df.year |> unique]
+
+# Write files
+rca_ecis = [e[1] for e in rca_complexity]
+rca_pcis = [p[2] for p in rca_complexity]
+rpca_ecis = [e[1] for e in rpca_complexity]
+rpca_pcis = [p[2] for p in rpca_complexity]
+
+Arrow.write(
+    datadir("processed", "complexity", "rca_eci.arrow"),
+    reduce(vcat, rca_ecis)
+)
+
+Arrow.write(
+    datadir("processed", "complexity", "rca_pci.arrow"),
+    reduce(vcat, rca_pcis)
+)
+
+Arrow.write(
+    datadir("processed", "complexity", "rpca_eci.arrow"),
+    reduce(vcat, rpca_ecis)
+)
+
+Arrow.write(
+    datadir("processed", "complexity", "rpca_pci.arrow"),
+    reduce(vcat, rpca_pcis)
+)

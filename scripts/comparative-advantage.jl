@@ -80,16 +80,16 @@ end
 
 # ---------------------------------------------------------------------------- #
 # Calculate RCA and RPCA and write to file:
-pop_df = Arrow.Table(datadir("processed", "international-population.arrow")) |> DataFrame
-exports_df = Arrow.Table(datadir("processed", "international-exports.arrow")) |> DataFrame
+pop_df = Arrow.Table(datadir("processed", "international-population", "international-population.arrow")) |> DataFrame
+exports_df = Arrow.Table(datadir("processed", "international-trade", "international-exports.arrow")) |> DataFrame
 rca_df = rca(exports_df)
 rpca_df = rpca(exports_df, pop_df)
 
 Arrow.write(
-    datadir("processed", "rca.arrow"),
+    datadir("processed", "international-trade", "rca.arrow"),
     rca_df
 )
 Arrow.write(
-    datadir("processed", "rpca.arrow"),
+    datadir("processed", "international-trade", "rpca.arrow"),
     rpca_df
 )
