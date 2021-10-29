@@ -1,31 +1,31 @@
 # Function that applies the state lookup dict.
 function fix_state(s::AbstractString)
-    # Dictionary with corrections:
-    state_lookup = Dict(
-        "Arunachal PR." => "Arunachal Pradesh",
-        "Andaman & N. Island" => "Andaman & Nicobar",
-        "W. Bengal + Sikkim" => "West Bengal + Sikkim",
-        "W.Bengal + Sikkim" => "West Bengal + Sikkim",
-        "Chhattisgarh" => "Chattisgarh",
-        "Uttaranchal" => "Uttarakhand",
-        "Lakshadweep#" => "Lakshadweep",
-        "Dadar Nagar Haveli" => "Dadra & Nagar Haveli",
-        "Andaman- Nicobar" => "Andaman & Nicobar",
-        "DVC" => "Damodar Valley Corporation",
-        "Pondicheny" => "Puducherry",
-        "Pondicherry" => "Puducherry",
-        "Chandigarh(U.T.)" => "Chandigarh",
-        "Orissa" => "Odisha",
-        "Telegana" => "Telangana"
-    )
-
-
     if haskey(state_lookup, s)
         return state_lookup[s]
     else
         return s
     end
 end
+# Dictionary with corrections:
+state_lookup = Dict(
+    "Arunachal PR." => "Arunachal Pradesh",
+    "Andaman & N. Island" => "Andaman & Nicobar",
+    "W. Bengal + Sikkim" => "West Bengal + Sikkim",
+    "W.Bengal + Sikkim" => "West Bengal + Sikkim",
+    "Chhattisgarh" => "Chattisgarh",
+    "Uttaranchal" => "Uttarakhand",
+    "Lakshadweep#" => "Lakshadweep",
+    "Lakshadweep#" => "Lakshadweep",
+    "Dadar Nagar Haveli" => "Dadra & Nagar Haveli",
+    "Andaman- Nicobar" => "Andaman & Nicobar",
+    "DVC" => "Damodar Valley Corporation",
+    "Pondicheny" => "Puducherry",
+    "Pondicherry" => "Puducherry",
+    "Chandigarh(U.T.)" => "Chandigarh",
+    "Orissa" => "Odisha",
+    "Telegana" => "Telangana"
+    "Jammu and Kashmir" => "Jammu & Kashmir"
+)
 
 # TODO: Add state-change dummy (fx spinning out Telangana from Andhra Pradesh affects numbers in both
 # Telangana AND Andhra Pradesh).

@@ -30,10 +30,12 @@ end
 
 
 function complexity_helper(comparative_advantage::DataFrame)
+    # Save year for later:
+    current_year = comparative_advantage.year |> unique |> only
     # Make sure we only have columns we need:
     select!(comparative_advantage, :countrycode, :hs_product_code, :rca)
     # Make dataframe wide --products in column names:
-    rca_wide = unstack(rca15, :countrycode, :hs_product_code, :rca, allowmissing=true)
+    rca_wide = unstack(comparative_advantage, :countrycode, :hs_product_code, :rca, allowmissing=true)
     # Save countries for later:
     countries = rca_wide.countrycode
     # Remove countrycode column:
@@ -47,14 +49,14 @@ function complexity_helper(comparative_advantage::DataFrame)
     ECI, PCI = get_complexity(Mcp)
 
     # Turn into dataframes and add country- and product names.
-    pci_df = DataFrame(PCI = PCI, hs_product_codes = products)
-    eci_df = DataFrame(ECI = ECI[:, 1], countrycodes = countries)
+    pci_df = DataFrame(PCI = PCI, hs_product_codes = products, year = current_year)
+    eci_df = DataFrame(ECI = ECI[:, 1], countrycodes = countries, year = current_year)
 
     # Get sign and adjust based on very complex country:
     jpn_eci = @rsubset(eci_df, :countrycodes == "JPN").ECI |> only
     eigensign = jpn_eci < 0 ? -1 : 1
-    eci_df.PCI = eci_df.ECI .* sign
-    pci_df.PCI = pci_df.PCI .* sign
+    eci_df.ECI = eci_df.ECI .* eigensign
+    pci_df.PCI = pci_df.PCI .* eigensign
 
     return eci_df, pci_df
 end

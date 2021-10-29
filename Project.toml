@@ -14,6 +14,8 @@ Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 MetaGraphs = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
 Planner = "b978ac42-d0bb-4511-a015-acc2bc30a5f4"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+ShiftedArrays = "1277b4bf-5013-50f5-be3d-901d8477a67a"
+XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
 DrWatson = "2.5.0"
